@@ -31,6 +31,6 @@ public class EventPublisher {
 
   void publish() throws Exception {
     var record = new ProducerRecord<>(topic, "A", "A");
-    kafkaProducer.send(record).get();
+    kafkaProducer.send(record);
   }
 }
