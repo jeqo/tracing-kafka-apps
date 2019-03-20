@@ -24,13 +24,15 @@ services:
       - zookeeper
   # Zipkin
   zipkin:
-    image: jeqo/zipkin-kafka:0.3.3-SNAPSHOT
+#    image: jeqo/zipkin-kafka:0.3.3-SNAPSHOT
+    image: openzipkin/zipkin:2.12.6
     ports:
       - 9411:9411
     environment:
-      KAFKA_STORE_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_STORE_DIRECTORY: /zipkin/data
-      KAFKA_STORE_COMPRESSION_TYPE: SNAPPY
+      STORAGE_TYPE: mem
+#      KAFKA_STORE_BOOTSTRAP_SERVERS: kafka:9092
+#      KAFKA_STORE_DIRECTORY: /zipkin/data
+#      KAFKA_STORE_COMPRESSION_TYPE: SNAPPY
     volumes:
       - zipkin:/zipkin/data
 volumes:

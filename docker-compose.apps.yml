@@ -5,23 +5,27 @@ services:
     image: jeqo/tracing-console-consumer:1.0.0-SNAPSHOT
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
   stream-processor-joiner:
     image: jeqo/tracing-stream-processor-joiner:1.0.0-SNAPSHOT
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       STATE_DIR: /kafka-stream
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
     volumes:
       - kafka-streams:/kafka-streams
   http-event-producer:
     image: jeqo/tracing-http-event-producer:1.0.0-SNAPSHOT
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
     ports:
       - 8080:8080
   http-metadata-producer:
     image: jeqo/tracing-http-metadata-producer:1.0.0-SNAPSHOT
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
     ports:
       - 8081:8081
 volumes:
