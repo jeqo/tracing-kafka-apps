@@ -29,7 +29,7 @@ docker-apps-up:
 docker-destroy:
 	docker-compose down --remove-orphans
 
-.PHONY: perf-test-small
-perf-test-small:
+.PHONY: perf-test
+perf-test:
 	curl http://localhost:8081
 	wrk -c 10 -t 4 -d 5 http://localhost:8080
