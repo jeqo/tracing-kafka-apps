@@ -22,6 +22,8 @@ public class EventPublisher {
         config.getString("bootstrap-servers"));
     producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
     producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+    producerConfig.put(ProducerConfig.BATCH_SIZE_CONFIG, 100000);
+    producerConfig.put(ProducerConfig.LINGER_MS_CONFIG, 1000);
 
     topic = config.getString("topics.events");
 
@@ -31,6 +33,6 @@ public class EventPublisher {
 
   void publish() throws Exception {
     var record = new ProducerRecord<>(topic, "A", "A");
-    kafkaProducer.send(record).get();
+    kafkaProducer.send(record);
   }
 }
