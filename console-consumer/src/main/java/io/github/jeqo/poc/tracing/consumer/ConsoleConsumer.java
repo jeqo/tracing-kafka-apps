@@ -7,6 +7,7 @@ import com.typesafe.config.Config;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
@@ -14,6 +15,8 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,13 +39,15 @@ public class ConsoleConsumer implements Runnable {
     config.put(ConsumerConfig.GROUP_ID_CONFIG, consumerConfig.getString("group-id"));
     config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
     config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+    config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
     tracer = tracing.tracer();
     kafkaTracing = KafkaTracing.newBuilder(tracing).writeB3SingleFormat(true).build();
     topics = consumerConfig.getStringList("topics");
   }
 
-  private void printRecord(ConsumerRecord<String, String> record) {
+  private void printRecord(Consumer<String, String> consumer,
+      ConsumerRecord<String, String> record) {
     var span = kafkaTracing.nextSpan(record).name("print").start();
     try (var ws = tracer.withSpanInScope(span)) {
       var ts = Stream.of(record.headers().toArray())
@@ -51,6 +56,10 @@ public class ConsoleConsumer implements Runnable {
       String headers = String.join(",", ts);
       System.out.printf("record %s-%s-%s: %s=%s (headers: %s)%n", record.topic(),
           record.partition(), record.offset(), record.key(), record.value(), headers);
+      consumer.commitSync(
+          Map.of(
+              new TopicPartition(record.topic(), record.partition()),
+              new OffsetAndMetadata(record.offset())));
     } catch (RuntimeException | Error e) {
       span.error(e);
       throw e;
@@ -66,7 +75,7 @@ public class ConsoleConsumer implements Runnable {
       tracingConsumer.subscribe(topics);
       while (running.get()) {
         var records = tracingConsumer.poll(Duration.ofSeconds(1));
-        records.forEach(this::printRecord);
+        records.forEach(r -> this.printRecord(tracingConsumer, r));
       }
     } catch (RuntimeException | Error e) {
       LOG.warn("Unexpected error in polling loop spans", e);
