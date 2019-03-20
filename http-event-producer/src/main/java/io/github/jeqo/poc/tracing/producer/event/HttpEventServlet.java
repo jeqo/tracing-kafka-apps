@@ -22,6 +22,7 @@ public class HttpEventServlet extends HttpServlet {
       throws IOException {
     ScopedSpan span = tracer.startScopedSpan("process");
     try {
+      span.tag("scenario", "producer-batch-send");
       eventPublisher.publish();
       resp.setContentType("text/plain; utf-8");
       resp.setStatus(HttpServletResponse.SC_ACCEPTED);
