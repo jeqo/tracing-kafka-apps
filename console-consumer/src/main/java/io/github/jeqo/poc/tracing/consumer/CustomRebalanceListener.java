@@ -1,4 +1,4 @@
-package io.github.jeqo.poc.tracing.consumer.demistify;
+package io.github.jeqo.poc.tracing.consumer;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -12,10 +12,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CustomRebalanceListener implements ConsumerRebalanceListener {
-  private static final Logger LOG = LoggerFactory.getLogger(CustomRebalanceListener.class);
-  private final KafkaConsumer kafkaConsumer;
-  // contains processed record(s) offset in current poll, should be cleared after all poll is
-  // processed
+  static final Logger LOG = LoggerFactory.getLogger(CustomRebalanceListener.class);
+  final KafkaConsumer kafkaConsumer;
+  // Map contains processed record(s) offset in current poll, should be cleared after each poll
+  // NB! mutable
   private Map<TopicPartition, OffsetAndMetadata> processedRecordsOffsets = Collections.emptyMap();
 
   CustomRebalanceListener(KafkaConsumer kafkaConsumer) {
@@ -63,8 +63,8 @@ public class CustomRebalanceListener implements ConsumerRebalanceListener {
   void commitProcessedRecords() {
     processedRecordsOffsets.entrySet().stream().forEach(
         offsetInfo ->
-          LOG.info("Topic partition: {}, Metadata: {}, \n last commited offset for the given partition: {}",
-              offsetInfo.getKey(), offsetInfo.getValue(), kafkaConsumer.committed(offsetInfo.getKey()))
+            LOG.info("Topic partition: {}, Metadata: {}, \n last commited offset for the given partition: {}",
+                offsetInfo.getKey(), offsetInfo.getValue(), kafkaConsumer.committed(offsetInfo.getKey()))
     );
     // commit sync all processed records offsets
     kafkaConsumer.commitSync(processedRecordsOffsets);
