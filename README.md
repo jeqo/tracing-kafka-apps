@@ -2,6 +2,12 @@
 
 Evaluation of Kafka client configurations via distributed tracing.
 
+## Requirements
+
++ JDK 11
++ Docker engine, Docker compose
++ [wrk](https://github.com/wg/wrk)
+
 ## Use-case
 
 + **Producers**: `http-event-producer`, `http-metadata-producer`
@@ -14,6 +20,14 @@ messages, to then send them to another Kafka topic. A Consumer polls from
 the final Kafka topic and process joined messages.
 
 ![use-case](docs/use-case.png)
+
+## How to run
+
+```bash
+make # this will build containers, start compose, create topics
+# after it completes
+make perf-test # this will start http testing took to create load.
+```
 
 ## Scenarios
 
@@ -97,3 +111,39 @@ can take up to a second to send a message.
 
 We only execute 1 round-trip (depending on `acks` and `min.isr`) for every batch.
 
+### Consumer: commit per record
+
+- `Event Producer`: sync send.
+- `Console Consumer`: commit per record.
+
+```java
+public class ConsoleConsumer implements Runnable {
+  private void printRecord(Consumer<String, String> consumer,
+      ConsumerRecord<String, String> record) {
+      // processing
+      consumer.commitSync(
+          Map.of(
+              new TopicPartition(record.topic(), record.partition()),
+              new OffsetAndMetadata(record.offset())));
+    // ...
+  }
+
+  @Override public void run() {
+    try (Consumer<String, String> tracingConsumer =
+             kafkaTracing.consumer(new KafkaConsumer<>(config))) {
+      tracingConsumer.subscribe(topics);
+      while (running.get()) {
+        var records = tracingConsumer.poll(Duration.ofSeconds(1));
+        records.forEach(r -> this.printRecord(tracingConsumer, r));
+      }
+    } // ...
+  }
+
+}
+```
+
+![scenario consumer commit per record](docs/scenario-consumer-commit-per-record.png)
+
+If we commit per record, is much harder for the consumer to keep up with the 
+producer pace. In this trace, it took almost a second to consume the record
+since it was produced.
