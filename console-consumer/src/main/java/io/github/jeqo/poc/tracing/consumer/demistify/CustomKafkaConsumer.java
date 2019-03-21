@@ -52,7 +52,7 @@ public class CustomKafkaConsumer implements Runnable {
         consumerRebalanceListener.clearProcessedRecordsOffsets();
         var records = tracingConsumer.poll(Duration.ofSeconds(1));
         for (ConsumerRecord<String, String> record : records) {
-          processRecord(record);
+          processRecord(record, consumerRebalanceListener);
         }
         // if async, can be race condition between consumerRebalanceListener.clearProcessedRecordsOffsets();
         // todo: investigate possibility to use commitAsync()
@@ -72,7 +72,8 @@ public class CustomKafkaConsumer implements Runnable {
     }
   }
 
-  private void processRecord(ConsumerRecord<String, String> record) {
+  private void processRecord(ConsumerRecord<String, String> record, CustomRebalanceListener customRebalanceListener) {
     // can be long-time processing
+    customRebalanceListener.addOffset(record.topic(), record.partition(), record.offset());
   }
 }
