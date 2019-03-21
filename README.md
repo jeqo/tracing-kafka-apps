@@ -17,7 +17,7 @@ the final Kafka topic and process joined messages.
 
 ## Scenarios
 
-### Default
+### Producer: sync send
 
 - `Event producer`: synchronous send.
 - `Console consumer`: auto-commit.
@@ -43,7 +43,7 @@ returned.
 
 Consumer poll and consume as soon as possible.
 
-### Producer async send
+### Producer: async send
 
 - `Event Producer`: async send.
 - `Console consumer`: auto-commit.
@@ -64,4 +64,36 @@ Instead of waiting for an acknowledge from the Kafka broker, producer does not b
 
 Consumer poll and consume as soon as possible.
 
-### 
+### Producer: batch send
+
+- `Event Producer`: async, batched send.
+- `Console Consumer`: auto-commit.
+
+```java
+public class EventPublisher {
+
+  public EventPublisher(Tracing tracing, Config config) {
+    var producerConfig = new Properties();
+    //...
+    producerConfig.put(ProducerConfig.BATCH_SIZE_CONFIG, 100000);
+    producerConfig.put(ProducerConfig.LINGER_MS_CONFIG, 1000);
+    //...
+  }
+
+  void publish() throws Exception {
+    var record = new ProducerRecord<>(topic, "A", "A");
+    kafkaProducer.send(record);
+  }
+}
+```
+
+![producer batch send](docs/scenario-producer-batch-send.png)
+
+Every message will be buffered until a batch of 100KB (`batch.size`) is created, 
+or 1 second  times out (`linger.ms`).
+
+Depending on how your message is positioned as part of the batch, your transaction
+can take up to a second to send a message.
+
+We only execute 1 round-trip (depending on `acks` and `min.isr`) for every batch.
+
