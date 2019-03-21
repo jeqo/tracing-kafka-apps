@@ -48,3 +48,20 @@ Consumer poll and consume as soon as possible.
 - `Event Producer`: async send.
 - `Console consumer`: auto-commit.
 
+```java
+public class EventPublisher {
+  // ...  
+  void publish() throws Exception {
+    var record = new ProducerRecord<>(topic, "A", "A");
+    kafkaProducer.send(record);
+  }
+}
+```
+
+![producer send async](docs/scenario-producer-async-send.png)
+
+Instead of waiting for an acknowledge from the Kafka broker, producer does not block, and HTTP return response after async send has complete.
+
+Consumer poll and consume as soon as possible.
+
+### 
