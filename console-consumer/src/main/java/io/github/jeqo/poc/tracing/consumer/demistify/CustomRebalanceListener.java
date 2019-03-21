@@ -42,8 +42,7 @@ public class CustomRebalanceListener implements ConsumerRebalanceListener {
             .collect(Collectors.joining(","));
     LOG.info("Following partitions will be committed: {}", processedOffsetsBeforeRevoke);
 
-    // commit sync all processed records offsets
-    kafkaConsumer.commitSync(processedRecordsOffsets);
+    commitProcessedRecords();
     clearProcessedRecordsOffsets();
   }
 
@@ -59,5 +58,15 @@ public class CustomRebalanceListener implements ConsumerRebalanceListener {
   // clear when partition revoke and each new poll
   void clearProcessedRecordsOffsets() {
     processedRecordsOffsets.clear();
+  }
+
+  void commitProcessedRecords() {
+    processedRecordsOffsets.entrySet().stream().forEach(
+        offsetInfo ->
+          LOG.info("Topic partition: {}, Metadata: {}, \n last commited offset for the given partition: {}",
+              offsetInfo.getKey(), offsetInfo.getValue(), kafkaConsumer.committed(offsetInfo.getKey()))
+    );
+    // commit sync all processed records offsets
+    kafkaConsumer.commitSync(processedRecordsOffsets);
   }
 }

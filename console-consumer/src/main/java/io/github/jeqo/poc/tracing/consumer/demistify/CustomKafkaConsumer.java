@@ -43,22 +43,32 @@ public class CustomKafkaConsumer implements Runnable {
   @Override
   public void run() {
     LOG.info("Starting Console consumer");
-
-    try (Consumer<String, String> tracingConsumer =
-        kafkaTracing.consumer(new KafkaConsumer<>(config))) {
-      var consumerRebalanceListener = new CustomRebalanceListener((KafkaConsumer) tracingConsumer);
+    Consumer<String, String> tracingConsumer = kafkaTracing.consumer(new KafkaConsumer<>(config));
+    var consumerRebalanceListener = new CustomRebalanceListener((KafkaConsumer) tracingConsumer);
+    try {
       tracingConsumer.subscribe(topics, consumerRebalanceListener);
       while (true) {
         // clear state of processed records for each poll
         consumerRebalanceListener.clearProcessedRecordsOffsets();
         var records = tracingConsumer.poll(Duration.ofSeconds(1));
-        records.forEach(this::processRecord);
+        for (ConsumerRecord<String, String> record : records) {
+          processRecord(record);
+        }
+        // if async, can be race condition between consumerRebalanceListener.clearProcessedRecordsOffsets();
+        // todo: investigate possibility to use commitAsync()
+        tracingConsumer.commitSync();
       }
     } catch (RuntimeException | Error e) {
       LOG.warn("Unexpected error in polling loop spans", e);
       throw e;
     } finally {
-      LOG.info("Kafka consumer polling loop stopped. Kafka consumer closed.");
+      LOG.info("Kafka consumer polling loop stopped. Kafka consumer trying commit last processed records");
+      try {
+        consumerRebalanceListener.commitProcessedRecords();
+      } finally{
+        LOG.info("Closing consumer");
+        tracingConsumer.close();
+      }
     }
   }
 
