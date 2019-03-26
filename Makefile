@@ -3,6 +3,10 @@ MVN := ./mvnw
 .PHONY: all
 all: build docker-base-up docker-image topics docker-apps-up
 
+.PHONY: format
+format:
+	${MVN} spring-javaformat:apply
+
 .PHONY: build
 build:
 	${MVN} clean install
