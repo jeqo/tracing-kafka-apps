@@ -5,14 +5,20 @@ import brave.kafka.streams.KafkaStreamsTracing;
 import com.typesafe.config.Config;
 import java.util.Properties;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.kstream.ValueJoiner;
+import org.apache.kafka.streams.processor.Processor;
+import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.Stores;
 
 class StreamProcessorJoiner {
 
@@ -47,10 +53,8 @@ class StreamProcessorJoiner {
   Topology topology() {
     var builder = new StreamsBuilder();
 
-    var metadataTable =
-        builder.table(
-            metadataTopic,
-            Materialized.<String, String, KeyValueStore<Bytes, byte[]>>as(metadataTopic));
+    KTable<String, String> metadataTable =
+        builder.table(metadataTopic, Materialized.as(Stores.inMemoryKeyValueStore(metadataTopic)));
 
     ValueJoiner<String, String, String> joiner =
         (event, metadata) -> String.format("%s (meta: %s)", event, metadata);
@@ -58,6 +62,54 @@ class StreamProcessorJoiner {
     builder.<String, String>stream(eventTopic)
         .join(metadataTable, joiner)
         .to(enrichedEventTopic);
+
+    return builder.build();
+  }
+
+  Topology otherTopology() {
+    var builder = new StreamsBuilder();
+
+    builder
+        .addStateStore(
+            Stores.keyValueStoreBuilder(
+                Stores.persistentKeyValueStore(metadataTopic),
+                Serdes.String(),
+                Serdes.String()))
+        .<String, String>stream(metadataTopic)
+        .process(() -> new Processor<>() {
+          KeyValueStore<String, String> store;
+
+          @Override public void init(ProcessorContext context) {
+            store = (KeyValueStore<String, String>) context.getStateStore(metadataTopic);
+          }
+
+          @Override public void process(String key, String value) {
+            store.put(key, value);
+          }
+
+          @Override public void close() {
+          }
+        }, metadataTopic);
+
+    builder
+        .<String, String>stream(eventTopic)
+        .transform(
+            () -> new Transformer<String, String, KeyValue<String, String>>() {
+              KeyValueStore<String, String> store;
+
+              @Override public void init(ProcessorContext context) {
+                store = (KeyValueStore<String, String>) context.getStateStore(metadataTopic);
+              }
+
+              @Override public KeyValue<String, String> transform(String key, String value) {
+                String metadata = store.get(key);
+                return KeyValue.pair(key, String.format("%s (meta: %s)", value, metadata));
+              }
+
+              @Override public void close() {
+              }
+            }, metadataTopic)
+        .to(enrichedEventTopic, Produced.with(Serdes.String(), Serdes.String()));
 
     return builder.build();
   }

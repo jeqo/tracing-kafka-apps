@@ -4,10 +4,12 @@ import brave.Tracing;
 import brave.kafka.clients.KafkaTracing;
 import com.typesafe.config.Config;
 import java.util.Properties;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 public class EventPublisher {
@@ -31,6 +33,9 @@ public class EventPublisher {
 
   void publish() throws Exception {
     var record = new ProducerRecord<>(topic, "A", "A");
-    kafkaProducer.send(record).get();
+    kafkaProducer.send(record, (metadata, exception) -> {
+      System.out.println("ACK: " + metadata);
+      Tracing.currentTracer().currentSpan().tag("ack", "yes");
+    }).get();
   }
 }
