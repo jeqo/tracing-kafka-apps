@@ -17,9 +17,9 @@ docker-image:
 
 .PHONY: topics
 topics:
-	kafka-topics --zookeeper localhost:2181 --create --topic events-v1 --partitions 1 --replication-factor 1 --if-not-exists
-	kafka-topics --zookeeper localhost:2181 --create --topic enriched-events-v1 --partitions 1 --replication-factor 1 --if-not-exists
-	kafka-topics --zookeeper localhost:2181 --create --topic metadata-v1 --partitions 1 --replication-factor 1 --if-not-exists
+	docker-compose exec kafka kafka-topics --zookeeper zookeeper:2181 --create --topic events-v1 --partitions 1 --replication-factor 1 --if-not-exists
+	docker-compose exec kafka kafka-topics --zookeeper zookeeper:2181 --create --topic enriched-events-v1 --partitions 1 --replication-factor 1 --if-not-exists
+	docker-compose exec kafka kafka-topics --zookeeper zookeeper:2181 --create --topic metadata-v1 --partitions 1 --replication-factor 1 --if-not-exists
 
 .PHONY: docker-base-up
 docker-base-up:

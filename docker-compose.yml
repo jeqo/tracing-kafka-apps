@@ -2,14 +2,14 @@ version: '3'
 services:
   # Kafka
   zookeeper:
-    image: confluentinc/cp-zookeeper:5.1.2
+    image: confluentinc/cp-zookeeper:5.3.0
     ports:
       - 2181:2181
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
   kafka:
-    image: confluentinc/cp-kafka:5.1.2
+    image: confluentinc/cp-kafka:5.3.0
     ports:
       - 9092:9092
       - 29092:29092
@@ -22,18 +22,16 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     depends_on:
       - zookeeper
-  # Zipkin
+  # Zipkin with memory storage / optionally enable kafka-based storage
   zipkin:
-#    image: jeqo/zipkin-kafka:0.3.3-SNAPSHOT
-    image: openzipkin/zipkin:2.12.6
+#    image: jeqo/zipkin-kafka:0.5.2
+    image: openzipkin/zipkin:2.16.2
     ports:
       - 9411:9411
     environment:
       STORAGE_TYPE: mem
-#      KAFKA_STORE_BOOTSTRAP_SERVERS: kafka:9092
-#      KAFKA_STORE_DIRECTORY: /zipkin/data
-#      KAFKA_STORE_COMPRESSION_TYPE: SNAPPY
-    volumes:
-      - zipkin:/zipkin/data
-volumes:
-  zipkin:
+#      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+#    volumes:
+#      - zipkin:/zipkin/data
+#volumes:
+#  zipkin:
