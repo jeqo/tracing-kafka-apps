@@ -1,34 +1,18 @@
 package io.github.jeqo.poc.tracing.producer.event;
 
 import brave.Tracing;
-import brave.kafka.clients.KafkaTracing;
-import com.typesafe.config.Config;
-import java.util.Properties;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.serialization.StringSerializer;
 
-public class EventPublisher {
+class EventPublisher {
 
   final String topic;
 
   final Producer<String, String> kafkaProducer;
 
-  public EventPublisher(Tracing tracing, Config config) {
-    var producerConfig = new Properties();
-    producerConfig.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-        config.getString("bootstrap-servers"));
-    producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-    producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-
-    topic = config.getString("topics.events");
-
-    var kafkaTracing = KafkaTracing.newBuilder(tracing).writeB3SingleFormat(true).build();
-    kafkaProducer = kafkaTracing.producer(new KafkaProducer<>(producerConfig));
+  EventPublisher(String topic, Producer<String, String> kafkaProducer) {
+    this.topic = topic;
+    this.kafkaProducer = kafkaProducer;
   }
 
   void publish() throws Exception {
@@ -36,6 +20,7 @@ public class EventPublisher {
     kafkaProducer.send(record, (metadata, exception) -> {
       System.out.println("ACK: " + metadata);
       Tracing.currentTracer().currentSpan().tag("ack", "yes");
-    }).get();
+      //}).get(); // Synchronous send
+    }); // Async send
   }
 }

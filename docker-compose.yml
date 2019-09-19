@@ -24,7 +24,7 @@ services:
       - zookeeper
   # Zipkin with memory storage / optionally enable kafka-based storage
   zipkin:
-#    image: jeqo/zipkin-kafka:0.5.2
+#    image: jeqo/zipkin-kafka:0.5.4
     image: openzipkin/zipkin:2.16.2
     ports:
       - 9411:9411

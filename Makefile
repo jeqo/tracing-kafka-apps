@@ -36,4 +36,4 @@ docker-destroy:
 .PHONY: perf-test
 perf-test:
 	curl http://localhost:8081
-	wrk -c 5 -t 5 -d 5 http://localhost:8080
+	wrk -c 3 -t 3 -d 3 http://localhost:8080

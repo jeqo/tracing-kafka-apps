@@ -7,6 +7,7 @@ import com.typesafe.config.Config;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
@@ -14,6 +15,8 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +39,7 @@ public class ConsoleConsumer implements Runnable {
     config.put(ConsumerConfig.GROUP_ID_CONFIG, consumerConfig.getString("group-id"));
     config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
     config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+    //config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
 
     tracer = tracing.tracer();
     kafkaTracing = KafkaTracing.newBuilder(tracing).writeB3SingleFormat(true).build();
@@ -61,12 +65,18 @@ public class ConsoleConsumer implements Runnable {
 
   @Override public void run() {
     LOG.info("Starting Console consumer");
-    try (Consumer<String, String> tracingConsumer =
-             kafkaTracing.consumer(new KafkaConsumer<>(config))) {
-      tracingConsumer.subscribe(topics);
+    try (Consumer<String, String> consumer = kafkaTracing.consumer(new KafkaConsumer<>(config))) {
+      consumer.subscribe(topics);
       while (running.get()) {
-        var records = tracingConsumer.poll(Duration.ofSeconds(1));
-        records.forEach(this::printRecord);
+        var records = consumer.poll(Duration.ofSeconds(1));
+        records.forEach(record -> {
+          printRecord(record);
+          //consumer.commitSync(
+          //    Map.of(
+          //        new TopicPartition(record.topic(), record.partition()),
+          //        new OffsetAndMetadata(record.offset())));
+        });
+        //consumer.commitSync();
       }
     } catch (RuntimeException | Error e) {
       LOG.warn("Unexpected error in polling loop spans", e);

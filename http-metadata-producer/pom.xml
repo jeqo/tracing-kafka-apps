@@ -13,16 +13,12 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-util</artifactId>
+      <groupId>com.linecorp.armeria</groupId>
+      <artifactId>armeria</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-servlet</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-server</artifactId>
+      <groupId>com.linecorp.armeria</groupId>
+      <artifactId>armeria-brave</artifactId>
     </dependency>
 
     <dependency>
