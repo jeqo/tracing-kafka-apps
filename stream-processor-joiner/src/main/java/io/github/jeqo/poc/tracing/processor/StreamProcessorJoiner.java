@@ -2,6 +2,7 @@ package io.github.jeqo.poc.tracing.processor;
 
 import brave.Tracing;
 import brave.kafka.streams.KafkaStreamsTracing;
+import brave.propagation.TraceContextOrSamplingFlags;
 import com.typesafe.config.Config;
 import java.util.Properties;
 import org.apache.kafka.common.serialization.Serdes;
@@ -47,7 +48,7 @@ class StreamProcessorJoiner {
   }
 
   KafkaStreams kafkaStreams() {
-    return kafkaStreamsTracing.kafkaStreams(topology(), streamsConfig);
+    return kafkaStreamsTracing.kafkaStreams(otherTopology(), streamsConfig);
   }
 
   Topology topology() {
@@ -93,7 +94,7 @@ class StreamProcessorJoiner {
 
     builder
         .<String, String>stream(eventTopic)
-        .transform(
+        .transform(kafkaStreamsTracing.transformer("join",
             () -> new Transformer<String, String, KeyValue<String, String>>() {
               KeyValueStore<String, String> store;
 
@@ -102,13 +103,16 @@ class StreamProcessorJoiner {
               }
 
               @Override public KeyValue<String, String> transform(String key, String value) {
+                TraceContextOrSamplingFlags s = TraceContextOrSamplingFlags.create(
+                    Tracing.currentTracer().currentSpan().context());
+                System.out.println(s);
                 String metadata = store.get(key);
                 return KeyValue.pair(key, String.format("%s (meta: %s)", value, metadata));
               }
 
               @Override public void close() {
               }
-            }, metadataTopic)
+            }), metadataTopic)
         .to(enrichedEventTopic, Produced.with(Serdes.String(), Serdes.String()));
 
     return builder.build();

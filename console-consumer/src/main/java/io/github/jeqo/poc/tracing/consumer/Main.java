@@ -13,8 +13,12 @@ public class Main {
     var sender =
         URLConnectionSender.newBuilder().endpoint(config.getString("zipkin.endpoint")).build();
     var reporter = AsyncReporter.builder(sender).build();
-    var tracing = Tracing.newBuilder().localServiceName("console-consumer")
-        .sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).traceId128Bit(true).build();
+    var tracing = Tracing.newBuilder()
+        .localServiceName("console-consumer")
+        .sampler(Sampler.ALWAYS_SAMPLE)
+        .spanReporter(reporter)
+        .traceId128Bit(true)
+        .build();
     // Run application
     var consoleConsumer = new ConsoleConsumer(tracing, config);
     Runtime.getRuntime().addShutdownHook(new Thread(consoleConsumer::stop));

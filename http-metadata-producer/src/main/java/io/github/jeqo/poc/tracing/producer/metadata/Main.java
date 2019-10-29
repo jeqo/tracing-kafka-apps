@@ -6,7 +6,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.brave.BraveService;
 import com.typesafe.config.ConfigFactory;
 import java.time.Instant;
@@ -29,7 +29,7 @@ public class Main {
     // Service
     var metadataPublisher = new MetadataPublisher(Tracing.current(), ConfigFactory.load());
     //HTTP Server
-    var server = new ServerBuilder().http(8081)
+    var server = Server.builder().http(8081)
         .decorator(BraveService.newDecorator(tracing))
         .service("/", (ctx, req) -> {
           var tracer = Tracing.currentTracer();
