@@ -10,7 +10,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.brave.BraveService;
 import com.typesafe.config.ConfigFactory;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
@@ -54,7 +53,7 @@ public class Main {
     // Service
     var eventPublisher = new EventPublisher(topic, kafkaProducer);
     //HTTP Server
-    Server server = new ServerBuilder()
+    Server server = Server.builder()
         .http(8080)
         .decorator(BraveService.newDecorator(tracing))
         .service("/metrics", (ctx, req) ->

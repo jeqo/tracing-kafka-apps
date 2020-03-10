@@ -4,7 +4,7 @@ import brave.Tracing;
 import brave.sampler.Sampler;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.Server;
 import com.typesafe.config.ConfigFactory;
 import io.micrometer.core.instrument.binder.kafka.KafkaStreamsMetrics;
 import io.micrometer.prometheus.PrometheusConfig;
@@ -26,7 +26,7 @@ public class Main {
     var streamProcessorJoiner = new StreamProcessorJoiner(tracing, config);
     var streams = streamProcessorJoiner.kafkaStreams();
     new KafkaStreamsMetrics(streams).bindTo(promRegistry);
-    var server = new ServerBuilder()
+    var server = Server.builder()
         .http(8082)
         .service("/metrics", (ctx, req) ->
             HttpResponse.of(MediaType.PLAIN_TEXT_UTF_8, promRegistry.scrape()))
