@@ -13,10 +13,22 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.linecorp.armeria</groupId>
+      <artifactId>armeria</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-clients</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
     <dependency>
       <groupId>io.zipkin.brave</groupId>
       <artifactId>brave-instrumentation-kafka-clients</artifactId>

@@ -13,6 +13,9 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.brave.BraveService;
 import com.typesafe.config.ConfigFactory;
+import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import java.time.Instant;
 import java.util.Properties;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -34,6 +37,7 @@ public class Main {
         .currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
         .spanReporter(reporter)
         .build();
+    var promRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
 
     var producerConfig = new Properties();
     producerConfig.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
@@ -43,15 +47,18 @@ public class Main {
 
     var topic = config.getString("topics.events");
 
-    var kafkaTracing = KafkaTracing.newBuilder(tracing).writeB3SingleFormat(true).build();
+    var kafkaTracing = KafkaTracing.newBuilder(tracing).build();
     var kafkaProducer = kafkaTracing.producer(
         new KafkaProducer<>(producerConfig, new StringSerializer(), new StringSerializer()));
+    new KafkaClientMetrics(kafkaProducer).bindTo(promRegistry);
     // Service
     var eventPublisher = new EventPublisher(topic, kafkaProducer);
     //HTTP Server
     Server server = new ServerBuilder()
         .http(8080)
         .decorator(BraveService.newDecorator(tracing))
+        .service("/metrics", (ctx, req) ->
+            HttpResponse.of(MediaType.PLAIN_TEXT_UTF_8, promRegistry.scrape()))
         .service("/", (ctx, req) -> {
           Tracer tracer = Tracing.currentTracer();
           ScopedSpan span = tracer.startScopedSpan("process");
@@ -73,7 +80,12 @@ public class Main {
           }
         })
         .build();
-    Runtime.getRuntime().addShutdownHook(new Thread(server::close));
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      tracing.close();
+      reporter.close();
+      promRegistry.close();
+      server.close();
+    }));
     server.start().join();
   }
 }
